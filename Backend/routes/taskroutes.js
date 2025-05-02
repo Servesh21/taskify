@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { getTasks, addTask, markAsDone, getUpcoming,markAsunDone } from '../controllers/taskControllers.js';
 const router = express.Router();
-const taskController = require('../controllers/taskController');
+router.get('/', getTasks);
+router.post('/', addTask);
+router.put('/:id/done', markAsDone);
+router.get('/:id/undone', markAsunDone);
+router.get('/upcoming/:range', getUpcoming);
 
-router.get('/', taskController.getTasks);
-router.post('/', taskController.addTask);
-router.put('/:id/done', taskController.markAsDone);
-router.get('/upcoming/:range', taskController.getUpcoming);
-
-module.exports = router;
+export default router;

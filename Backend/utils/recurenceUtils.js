@@ -17,5 +17,5 @@ function generateRecurringDates(startDate, type, interval, endDate) {
     return dates;
   }
   
-  module.exports = { generateRecurringDates };
+  export default generateRecurringDates;
   

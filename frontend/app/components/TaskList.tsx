@@ -2,45 +2,61 @@
 import { useState } from 'react';
 
 interface Task {
+  id: number;
   title: string;
-  startDate: Date;
+  startDate: string | Date;
   recurrenceType: string;
   interval: number;
-  endDate?: Date | null;
+  endDate?: string | Date | null;
   completed: boolean;
 }
 
-export default function TaskList({ tasks, onToggle }: {
+export default function TaskList({
+  tasks,
+  markasdone,
+  markasundone,
+}: {
   tasks: Task[];
-  onToggle: (index: number) => void;
+  markasdone: (id: number) => void;
+  markasundone: (id: number) => void;
 }) {
+  if (!Array.isArray(tasks)) return <p>Invalid task data</p>;
+  
   const pending = tasks.filter((task) => !task.completed);
   const completed = tasks.filter((task) => task.completed);
 
-  const renderTask = (task: Task, idx: number) => (
-    <li key={idx} className="p-3 bg-white rounded shadow-sm border flex justify-between items-center">
-      <div>
-        <strong>{task.title}</strong>
-        <div className="text-sm text-gray-600">
-          Starts on: {new Date(task.startDate).toLocaleDateString()}
-          {task.recurrenceType !== 'none' && (
-            <div>
-              Repeats every {task.interval} {task.recurrenceType}
-              {task.endDate && `, until ${new Date(task.endDate).toLocaleDateString()}`}
-            </div>
-          )}
-        </div>
-      </div>
-      <button
-        onClick={() => onToggle(idx)}
-        className={`px-3 py-1 rounded text-sm ${
-          task.completed ? 'bg-green-500 text-white' : 'bg-gray-300 text-black'
-        }`}
+  const renderTask = (task: Task, idx: number) => {
+    const start = new Date(task.startDate);
+    const end = task.endDate ? new Date(task.endDate) : null;
+
+    return (
+      <li
+        key={task.id}
+        className="p-3 bg-white rounded shadow-sm border flex justify-between items-center"
       >
-        {task.completed ? 'Undo' : 'Mark as Done'}
-      </button>
-    </li>
-  );
+        <div>
+          <strong>{task.title}</strong>
+          <div className="text-sm text-gray-600">
+            Starts on: {start.toLocaleDateString()}
+            {task.recurrenceType !== 'none' && (
+              <div>
+                Repeats every {task.interval} {task.recurrenceType}
+                {end && `, until ${end.toLocaleDateString()}`}
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => task.completed ? markasundone(task.id) : markasdone(task.id)}
+          className={`px-3 py-1 rounded text-sm ${
+            task.completed ? 'bg-green-500 text-white' : 'bg-gray-300 text-black'
+          }`}
+        >
+          {task.completed ? 'Undo' : 'Mark as Done'}
+        </button>
+      </li>
+    );
+  };
 
   return (
     <div className="space-y-6">
