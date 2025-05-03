@@ -137,7 +137,7 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
         </div>
       )}
 
-      {recurrenceType !== 'none' && startDate && (
+      {/* {recurrenceType !== 'none' && startDate && (
         <div>
           <label className="block font-medium mb-1">Preview Recurrence</label>
           <div className="bg-gray-100 p-2 rounded text-sm text-gray-700 space-y-1">
@@ -153,7 +153,7 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
               ))}
           </div>
         </div>
-      )}
+      )} */}
 
       <div>
         <label className="block font-medium">End Date (optional)</label>

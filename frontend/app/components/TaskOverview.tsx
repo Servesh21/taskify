@@ -1,66 +1,146 @@
 'use client';
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
+import { Calendar, dateFnsLocalizer, Event } from 'react-big-calendar';
+import { 
+  format, 
+  parse, 
+  startOfWeek, 
+  getDay, 
+  parseISO, 
+  isSameDay,
+  addMonths,
+  subMonths
+} from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { fetchUpcoming } from '../lib/api';
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales: {},
+});
 
 type UpcomingTask = {
   title: string;
-  upcomingDates: string[]; // Dates in string format from backend
+  upcomingDates: string[];
 };
 
-const TaskOverview = ({
-  week,
-  month,
-}: {
-  week: UpcomingTask[];
-  month: UpcomingTask[];
-}) => {
-  const [viewPeriod, setViewPeriod] = useState<'week' | 'month'>('week');
-  const data = viewPeriod === 'week' ? week : month;
+type CalendarEvent = {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+};
+
+export default function TaskOverview() {
+  const [tasks, setTasks] = useState<UpcomingTask[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [selectedDateTasks, setSelectedDateTasks] = useState<UpcomingTask[]>([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    const loadData = async () => {
+      const allTasks = await fetchUpcoming('month'); // or 'all' if you support it
+      setTasks(allTasks);
+
+      // Convert to calendar events
+      const calendarEvents: CalendarEvent[] = [];
+      allTasks.forEach((task: { upcomingDates: any[]; title: any; }) => {
+        task.upcomingDates.forEach(dateStr => {
+          const date = parseISO(dateStr);
+          calendarEvents.push({
+            title: task.title,
+            start: date,
+            end: date,
+            allDay: true,
+          });
+        });
+      });
+      setEvents(calendarEvents);
+    };
+
+    loadData();
+  }, []);
+
+  const handleDateClick = (slotInfo: { start: Date }) => {
+    const clickedDate = slotInfo.start;
+    const filteredTasks = tasks.filter(task =>
+      task.upcomingDates.some(dateStr =>
+        isSameDay(parseISO(dateStr), clickedDate)
+      )
+    );
+    setSelectedDateTasks(filteredTasks);
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(subMonths(currentDate, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(addMonths(currentDate, 1));
+  };
+
+  const currentMonthDisplay = format(currentDate, 'MMMM yyyy');
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Upcoming Tasks</h2>
-        <div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Calendar View</h2>
+        <div className="flex items-center space-x-4">
           <button
-            onClick={() => setViewPeriod('week')}
-            className={`px-4 py-2 ${
-              viewPeriod === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-            }`}
+            className="p-2 rounded-full hover:bg-gray-100"
+            onClick={handlePreviousMonth}
+            aria-label="Previous month"
           >
-            Week
+            <ChevronLeft className="h-5 w-5 text-gray-700" />
           </button>
+          
+          <span className="text-lg font-medium">{currentMonthDisplay}</span>
+          
           <button
-            onClick={() => setViewPeriod('month')}
-            className={`px-4 py-2 ${
-              viewPeriod === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-            }`}
+            className="p-2 rounded-full hover:bg-gray-100"
+            onClick={handleNextMonth}
+            aria-label="Next month"
           >
-            Month
+            <ChevronRight className="h-5 w-5 text-gray-700" />
           </button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {data.length === 0 ? (
-          <p>No upcoming tasks</p>
+      <div className="h-[70vh] bg-white shadow rounded p-4">
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          selectable
+          onSelectSlot={handleDateClick}
+          views={['month']}
+          date={currentDate}
+          onNavigate={(date) => {
+            setCurrentDate(date);
+          }}
+          toolbar={false} // Remove default toolbar
+          style={{ height: '100%' }}
+        />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mt-4">Tasks on Selected Date:</h3>
+        {selectedDateTasks.length === 0 ? (
+          <p className="text-gray-600">No tasks on this date.</p>
         ) : (
-          data.map((task, i) => (
-            <div
-              key={i}
-              className="border p-4 rounded-lg bg-white shadow-md space-y-1"
-            >
-              <h3 className="font-medium text-lg">{task.title}</h3>
-              {task.upcomingDates.map((date, j) => (
-                <p key={j} className="text-sm text-gray-600">
-                  {new Date(date).toLocaleDateString()}
-                </p>
-              ))}
-            </div>
-          ))
+          <ul className="list-disc list-inside text-gray-800">
+            {selectedDateTasks.map((task, i) => (
+              <li key={i}>{task.title}</li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
   );
-};
-
-export default TaskOverview;
+}

@@ -1,10 +1,17 @@
 import express from 'express';
-import { getTasks, addTask, markAsDone, getUpcoming,markAsunDone } from '../controllers/taskControllers.js';
+import { authenticate } from '../middleware/auth.js';
+import {
+  getTasks, addTask, markAsDone, markAsunDone, getUpcoming, deleteTask
+} from '../controllers/taskControllers.js';
+
 const router = express.Router();
-router.get('/', getTasks);
-router.post('/', addTask);
-router.put('/:id/done', markAsDone);
-router.get('/:id/undone', markAsunDone);
-router.get('/upcoming/:range', getUpcoming);
+
+
+router.get('/',authenticate, getTasks);
+router.post('/',authenticate, addTask);
+router.patch('/:id/done',authenticate, markAsDone);
+router.patch('/:id/undone',authenticate, markAsunDone);
+router.get('/upcoming/:range',authenticate, getUpcoming);
+router.delete('/:id',authenticate, deleteTask);
 
 export default router;

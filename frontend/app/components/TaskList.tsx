@@ -1,11 +1,13 @@
 'use client';
-import { useState } from 'react';
+
+import { deleteTask,fetchTasks } from '../lib/api'; // Make sure this points to your deleteTask function
+import { useEffect, useState } from 'react';
 
 interface Task {
   id: number;
   title: string;
-  startDate: string | Date;
-  recurrenceType: string;
+  start_date: string | Date;
+  recurrence_type: string;
   interval: number;
   endDate?: string | Date | null;
   completed: boolean;
@@ -15,18 +17,33 @@ export default function TaskList({
   tasks,
   markasdone,
   markasundone,
+  onDelete,
 }: {
   tasks: Task[];
   markasdone: (id: number) => void;
   markasundone: (id: number) => void;
+  onDelete?: (id: number) => void; 
 }) {
   if (!Array.isArray(tasks)) return <p>Invalid task data</p>;
-  
+
   const pending = tasks.filter((task) => !task.completed);
   const completed = tasks.filter((task) => task.completed);
 
-  const renderTask = (task: Task, idx: number) => {
-    const start = new Date(task.startDate);
+  const handleDelete = async (id: number) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(id);
+        alert('Task deleted');
+        if (onDelete) onDelete(id); 
+      } catch (error) {
+        alert('Failed to delete task');
+        console.error(error);
+      }
+    }
+  };
+
+  const renderTask = (task: Task) => {
+    const start = new Date(task.start_date);
     const end = task.endDate ? new Date(task.endDate) : null;
 
     return (
@@ -38,22 +55,33 @@ export default function TaskList({
           <strong>{task.title}</strong>
           <div className="text-sm text-gray-600">
             Starts on: {start.toLocaleDateString()}
-            {task.recurrenceType !== 'none' && (
+            {task.recurrence_type !== 'none' && (
               <div>
-                Repeats every {task.interval} {task.recurrenceType}
+                Repeats {task.recurrence_type}
                 {end && `, until ${end.toLocaleDateString()}`}
               </div>
             )}
           </div>
         </div>
-        <button
-          onClick={() => task.completed ? markasundone(task.id) : markasdone(task.id)}
-          className={`px-3 py-1 rounded text-sm ${
-            task.completed ? 'bg-green-500 text-white' : 'bg-gray-300 text-black'
-          }`}
-        >
-          {task.completed ? 'Undo' : 'Mark as Done'}
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() =>
+              task.completed ? markasundone(task.id) : markasdone(task.id)
+            }
+            className={`px-3 py-1 rounded text-sm ${
+              task.completed ? 'bg-green-500 text-white' : 'bg-gray-300 text-black'
+            }`}
+          >
+            {task.completed ? 'Undo' : 'Mark as Done'}
+          </button>
+          <button
+            onClick={() => handleDelete(task.id)}
+            className="px-3 py-1 rounded text-sm bg-red-500 text-white"
+          >
+            Delete
+          </button>
+        </div>
       </li>
     );
   };
