@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../store/UseAuthStore';
@@ -16,7 +15,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [upcomingWeek, setUpcomingWeek] = useState<any[]>([]);
   const [upcomingMonth, setUpcomingMonth] = useState<any[]>([]);
-  const [view, setView] = useState<'today' | 'upcoming'>('today'); // 👈 Toggle view
+  const [view, setView] = useState<'today' | 'upcoming'>('today'); // Toggle view
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -54,53 +53,85 @@ export default function DashboardPage() {
     await markasUndone(id);
     loadTasks();
   };
+  
   const handleDelete = (id: number) => {
     setTasks((prev) => prev.filter((task) => task.id !== id)); // remove task from state
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Task Dashboard</h1>
-        <button
-          onClick={() => {
-            logout();
-            router.push('/');
-          }}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header with logout button */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-800">Taskify Dashboard</h1>
+            <button
+              onClick={() => {
+                logout();
+                router.push('/');
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column - Task Form */}
+          <div className="lg:col-span-1">
+            <TaskForm onAdd={handleAddTask} />
+          </div>
+
+          {/* Right column - Task List/Overview */}
+          <div className="lg:col-span-2">
+            {/* View Toggle Buttons */}
+            <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setView('today')}
+                  className={`flex-1 py-2 rounded-md font-medium transition text-center ${
+                    view === 'today' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Today's Tasks
+                </button>
+                <button
+                  onClick={() => setView('upcoming')}
+                  className={`flex-1 py-2 rounded-md font-medium transition text-center ${
+                    view === 'upcoming' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Upcoming Tasks
+                </button>
+              </div>
+            </div>
+
+            {/* Conditionally render TaskList or TaskOverview */}
+            <div className="bg-white rounded-lg shadow-md">
+              {view === 'today' ? (
+                <TaskList 
+                  tasks={tasks} 
+                  markasdone={handlemarkAsDone} 
+                  markasundone={MarkAsundone} 
+                  onDelete={handleDelete} 
+                />
+              ) : (
+                <TaskOverview 
+
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <TaskForm onAdd={handleAddTask} />
-
-      {/* 👇 Navbar Toggle */}
-      <div className="flex space-x-4 mb-6">
-        <button
-          onClick={() => setView('today')}
-          className={`px-4 py-2 rounded ${
-            view === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}
-        >
-          Today's Tasks
-        </button>
-        <button
-          onClick={() => setView('upcoming')}
-          className={`px-4 py-2 rounded ${
-            view === 'upcoming' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}
-        >
-          Upcoming Tasks
-        </button>
-      </div>
-
-      {/* 👇 View Toggler */}
-      {view === 'today' ? (
-        <TaskList tasks={tasks} markasdone={handlemarkAsDone} markasundone={MarkAsundone} onDelete={handleDelete} />
-      ) : (
-        <TaskOverview />
-      )}
     </div>
   );
 }

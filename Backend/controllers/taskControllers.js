@@ -36,17 +36,25 @@ const addTask = async (req, res) => {
 
 const markAsDone = async (req, res) => {
   const { id } = req.params;
-  console.log('Marking task as done:', id);
-  try {
-    await pool.query('UPDATE tasks SET completed = $1 WHERE id = $2 AND user_id = $3', [true, id, req.user.id]);
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    console.log('Task marked as completed');
+  try {
+    const result = await pool.query(
+      'UPDATE tasks SET completed = true WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, userId]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Task not found or unauthorized' });
+    }
+
     res.json({ message: 'Task marked as completed' });
   } catch (err) {
-    console.error('Error marking task as done:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 const markAsunDone = async (req, res) => {
   const { id } = req.params;

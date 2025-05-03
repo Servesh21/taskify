@@ -21,15 +21,16 @@ export async function addTask(task: any) {
 
 export async function markAsDone(id: number) {
   const res = await fetch(`${API_BASE}/${id}/done`, {
-    method: 'PUT',
+    method: 'PATCH',
     credentials: 'include',
   });
+  console.log('Response from markAsDone:', res);
   return res.json();
 }
 
 export async function markasUndone(id: number) {
   const res = await fetch(`${API_BASE}/${id}/undone`, {
-    method: 'PUT',
+    method: 'PATCH',
     credentials: 'include',
   });
   return res.json();
