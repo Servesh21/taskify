@@ -1,9 +1,76 @@
 'use client';
-import { generateRecurringDates } from '../utils/generateRecurringDates';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { generateRecurringDates } from '../utils/generateRecurringDates';
+
+// MiniCalendar component for month view
+function MiniCalendar({ month, year, highlightDates = [] }: { month: number; year: number; highlightDates?: Date[] }) {
+  // Get first day of the month
+  const firstDay = new Date(year, month, 1);
+  const startingDay = firstDay.getDay(); // 0 = Sunday
+  
+  // Get days in month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  // Convert highlight dates to day numbers with month filter
+  const highlightDaysInMonth = highlightDates
+    .filter(date => date.getMonth() === month && date.getFullYear() === year)
+    .map(date => date.getDate());
+  
+  // Generate calendar grid (6 rows max)
+  const calendar = [];
+  let day = 1;
+  
+  // Create weeks
+  for (let i = 0; i < 6; i++) {
+    const week = [];
+    
+    // Create days in a week
+    for (let j = 0; j < 7; j++) {
+      if ((i === 0 && j < startingDay) || day > daysInMonth) {
+        // Empty cell
+        week.push(null);
+      } else {
+        week.push(day);
+        day++;
+      }
+    }
+    
+    calendar.push(week);
+    
+    // Stop if we've used all days
+    if (day > daysInMonth) {
+      break;
+    }
+  }
+  
+  return (
+    <div className="mb-3">
+      <div className="text-sm font-medium text-center text-gray-700 mb-2">
+        {new Date(year, month).toLocaleString('default', { month: 'long' })} {year}
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-xs">
+        {calendar.map((week, weekIndex) => (
+          week.map((day, dayIndex) => (
+            <div 
+              key={`${weekIndex}-${dayIndex}`} 
+              className={`h-6 flex items-center justify-center rounded-full ${
+                day ? (
+                  highlightDaysInMonth.includes(day)
+                    ? 'bg-blue-500 text-white font-bold'
+                    : 'text-gray-700'
+                ) : ''
+              }`}
+            >
+              {day || ''}
+            </div>
+          ))
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
   const [title, setTitle] = useState('');
@@ -14,6 +81,34 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]); // For specific weekdays
   const [nthWeek, setNthWeek] = useState<number>(1); // For nth weekday
   const [nthWeekday, setNthWeekday] = useState<number>(0); // For nth weekday (e.g., Monday = 1)
+  const [previewDates, setPreviewDates] = useState<Date[]>([]);
+
+  // Generate preview dates whenever recurrence parameters change
+  useEffect(() => {
+    try {
+      if (startDate) {
+        // Generate next 10 occurrences (or fewer if endDate limits it)
+        const dates = generateRecurringDates({
+          startDate,
+          recurrenceType,
+          interval: Math.max(1, interval || 1), // Ensure interval is at least 1
+          endDate,
+          selectedWeekdays: recurrenceType === 'weekday' ? selectedWeekdays : undefined,
+          nthWeek: recurrenceType === 'nthWeekday' ? Math.max(1, nthWeek || 1) : undefined,
+          nthWeekday: recurrenceType === 'nthWeekday' ? (nthWeekday || 0) : undefined,
+          limit: 30
+        });
+        
+        console.log("Generated dates:", dates);
+        setPreviewDates(Array.isArray(dates) && dates.length > 0 ? dates : [new Date(startDate)]);
+      } else {
+        setPreviewDates([new Date()]);
+      }
+    } catch (error) {
+      console.error("Error generating preview dates:", error);
+      setPreviewDates(startDate ? [new Date(startDate)] : [new Date()]);
+    }
+  }, [startDate, recurrenceType, interval, endDate, selectedWeekdays, nthWeek, nthWeekday]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +159,16 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
       );
     }
     return null;
+  };
+
+  // Format date for the mini calendar
+  const formatPreviewDate = (date: Date) => {
+    return {
+      day: date.getDate(),
+      month: date.toLocaleString('default', { month: 'short' }),
+      year: date.getFullYear(),
+      weekday: date.toLocaleString('default', { weekday: 'short' })
+    };
   };
 
   return (
@@ -212,6 +317,71 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
         </div>
       )}
 
+      {/* Mini Calendar Preview */}
+      {previewDates.length > 0 && (
+        <div className="mb-5 bg-white p-4 rounded-md border border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Upcoming Occurrences</h3>
+          
+          {/* Calendar View */}
+          <div className="mb-4">
+            {startDate && (
+              <div className="border border-gray-200 rounded-md p-2 bg-gray-50">
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                    <div key={i} className="text-center text-xs font-medium text-gray-500">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                <MiniCalendar 
+                  month={startDate.getMonth()} 
+                  year={startDate.getFullYear()} 
+                  highlightDates={previewDates}
+                />
+                
+                {/* Show next month if we have events there */}
+                {previewDates.some(date => 
+                  date.getMonth() !== startDate.getMonth() || 
+                  date.getFullYear() !== startDate.getFullYear()
+                ) && (
+                  <MiniCalendar 
+                    month={(startDate.getMonth() + 1) % 12} 
+                    year={startDate.getMonth() === 11 ? startDate.getFullYear() + 1 : startDate.getFullYear()} 
+                    highlightDates={previewDates}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Date Cards */}
+          <div className="flex overflow-x-auto pb-2 -mx-1">
+            {previewDates.map((date, index) => {
+              const formattedDate = formatPreviewDate(date);
+              return (
+                <div key={index} className="flex-shrink-0 mx-1">
+                  <div className="w-20 h-24 rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+                    <div className="bg-blue-100 text-center py-1 text-xs font-medium text-blue-800">
+                      {formattedDate.month}
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center bg-white">
+                      <div className="text-2xl font-semibold text-gray-800">{formattedDate.day}</div>
+                      <div className="text-xs text-gray-500">{formattedDate.weekday}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {previewDates.length === 1 
+              ? "One-time task" 
+              : `Showing next ${previewDates.length} occurrence${previewDates.length > 1 ? 's' : ''}`}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-end space-x-3 mt-6">
         <button
           type="button"
@@ -222,6 +392,8 @@ export default function TaskForm({ onAdd }: { onAdd: (task: any) => void }) {
             setInterval(1);
             setEndDate(null);
             setSelectedWeekdays([]);
+            setNthWeek(1);
+            setNthWeekday(0);
           }}
           className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
